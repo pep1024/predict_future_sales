@@ -198,7 +198,7 @@ plot(df_unique_shops_by_month$month, df_unique_shops_by_month$q,
   ylab = "Quantity of shops", xlab = "Month id", las = 1, cex.axis = 0.8,
   xlim = c(0, 34))
 # Add shops in the test dataset
-test_df <- data.frame(month = 34, q = length(unique(test$shop_id)))
+test_df <- data.frame(month = 34, q = length(unique(testset_all$shop_id)))
 points(test_df$month, test_df$q, pch = 16, col = "red")
 grid()
 ```
@@ -206,7 +206,7 @@ grid()
 Is there any new shop in the test month?
 
 ```{r}
-sum(!unique(test$shop_id) %in% unique(dataset_all[dataset_all$date_block_num == 33, ]$shop_id))
+sum(!unique(testset_all$shop_id) %in% unique(dataset_all[dataset_all$date_block_num == 33, ]$shop_id))
 ```
 
 All shops in the test month existed also in the month before. This is a test to run before using any model
@@ -223,9 +223,9 @@ unique_shop_item_by_month <- tapply(dataset_all$shop_item, dataset_all$date_bloc
 df_unique_shop_item_by_month <- data.frame(month = 0:33, q = as.numeric(unique_shop_item_by_month))
 plot(df_unique_shop_item_by_month$month, df_unique_shop_item_by_month$q,
   ylab = "Quantity of shops_item", xlab = "Month id", las = 1, cex.axis = 0.8,
-  xlim = c(0, 34))
+  xlim = c(0, 34), ylim = c(0, 250000))
 # Add shops in the test dataset
-test_df <- data.frame(month = 34, q = max(test$ID) + 1)
+test_df <- data.frame(month = 34, q = nrow(testset_all))
 points(test_df$month, test_df$q, pch = 16, col = "red")
 grid()
 ```
@@ -244,7 +244,7 @@ plot(df_q_months_by_shop$shop, df_q_months_by_shop$q,
   ylab = "Quantity of months active", xlab = "Shop id", las = 1, cex.axis = 0.8,
   xlim = c(0, 59))
 # Add shops in the test dataset
-test_df <- data.frame(shop = 0:59, q = (0:59) %in% unique(test$shop_id))
+test_df <- data.frame(shop = 0:59, q = (0:59) %in% unique(testset_all$shop_id))
 points(df_q_months_by_shop[test_df$q, ]$shop, 
   df_q_months_by_shop[test_df$q, ]$q, pch = 16, col = "red")
 grid()
@@ -280,8 +280,9 @@ max(df_month$item_cnt_day)
 
 ```{r}
 q_different <- table(df_month$item_cnt_day[df_month$item_cnt_day > 0])
-
 ```
+
+
 ```{r}
 head(q_different)
 tail(q_different)
@@ -294,6 +295,7 @@ df_month[df_month$item_cnt_day == max(df_month$item_cnt_day), ]
 
 ```{r}
 range(q_different)
+range(df_month$item_cnt_day)
 ```
 
 
@@ -314,7 +316,12 @@ abline(h = c(1, 10, 100, 1000, 10000, 100000, 1000000),
 ```{r}
 month <- 23
 month_set <- dataset_all[dataset_all$date_block_num == month, ]
-all_combinations <- expand.grid(shops = unique(test_set$shop_id), item = unique(test_set$item_id))
+all_combinations <- expand.grid(shops = unique(month_set$shop_id), item = unique(month_set$item_id))
+```
+
+```{r}
+cat("Distinct shop_item in month", month, ":", nrow(month_set), "\n")
+cat("potential shop_item in month", month, ":", nrow(all_combinations), "\n")
 ```
 
 
@@ -450,7 +457,7 @@ items_month <- function(n){
 
 
 ```{r}
-items_month(3)
+items_month(34)
 ```
 
 ```{r}
@@ -458,6 +465,20 @@ m_items <- t(sapply(0:34, items_month))
 colnames(m_items) <- c("#items", "q_sold")
 m_items
 ```
+
+```{r}
+dates <- seq.Date(as.Date("2013-01-01"), as.Date("2015-11-01"), by = "month")
+plot(dates, m_items[, 1], xlab = "Months",
+  ylab = "Number of different references (items)", las = 1, xaxt = "n")
+axis.Date(1, dates)
+x_ticks = axis.Date(1, dates, labels = F)
+
+grid(nx = NA, ny = NULL)
+abline(v = x_ticks, col ="lightgray", lty = 3)
+points(as.Date("2015-11-01"), m_items[35, 1], col = "red", pch = 16)
+```
+
+
 
 ```{r}
 m_not_in_previous_month - m_new
@@ -494,10 +515,10 @@ sum(m_items[-1, ] != m_in_previous_month + (m_not_in_previous_month - m_new) + m
 ```
 
 ```{r}
-month <- 10
+month <- 23
 cat("items in month (", month, "):", m_items[month + 1, ], "\n")
-cat("items in month - 1 (", month - 1, "):", m_in_previous_month[month, ], "\n")
-cat("items not in month -1 (", month - 1, ") but in some month before:", 
+cat("items in previous month (", month - 1, "):", m_in_previous_month[month, ], "\n")
+cat("items not in previous month (", month - 1, ") but in some month before:", 
   m_not_in_previous_month[month, ] - m_new[month, ], "\n")
 cat("items new in month (", month , "):", m_new[month, ], "\n")
 ```
