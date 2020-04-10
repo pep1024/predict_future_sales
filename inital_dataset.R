@@ -34,4 +34,15 @@ testset_all <- merge(testset, items[, -1])
 time_0 <- Sys.time()
 save(dataset_all, file = "data/dataset_all.RData")
 save(testset_all, file = "data/testset_all.RData")
+save(items, file = "data/items.RData")
+save(shops, file = "data/shops.RData")
+save(item_categories, file = "data/item_categories.RData")
+save(test, file = "data/items.RData")
 difftime(Sys.time(), time_0, units = "auto")
+
+## Monthly data
+
+
+df_month <- aggregate(item_cnt_day ~ item_id + date_block_num + shop_id + shop_item + item_category_id,
+  data = dataset_all[, -4], sum)
+save(df_month, file = "data/df_month.RData")
