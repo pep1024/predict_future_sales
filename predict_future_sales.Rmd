@@ -357,7 +357,7 @@ length(unique(df_month[ df_month$date_block_num == 33, ]$shop_id)) *
 
 ```
 
-In Nov-2015, we have `r nrow(testset)`. Total number of shop_item in month 34 that does not exist in month 33 are
+In Nov-2015, we have `r nrow(testset_all)`. Total number of shop_item in month 34 that does not exist in month 33 are
 
 ```{r}
 sum(!unique(testset_all$shop_item) %in% unique(df_month[ df_month$date_block_num == 33, ]$shop_item))
