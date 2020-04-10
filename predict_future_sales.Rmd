@@ -1,0 +1,507 @@
+---
+title: "Predict Future Sales"
+author: "Pep Porrà"
+date: "March, 5th 2020"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Read Data
+
+(https://www.kaggle.com/c/competitive-data-science-predict-future-sales/overview)
+
+```{r}
+list.files("data/")
+```
+
+Read in Russian item, category and shop descriptions
+
+```{r}
+#Sys.setlocale()
+Sys.setlocale(locale = "Russian")
+Sys.setlocale(locale = "English")
+#Sys.setlocale(locale = "")
+```
+
+
+```{r}
+load("data/dataset_all.RData")
+load("data/testset_all.RData")
+load("data/items.RData")
+load("data/item_categories.RData")
+load("data/shops.RData")
+```
+
+
+## Features checks and properties
+
+
+Check shop and item categories numbers. Test OK
+
+```{r}
+length(unique(dataset_all$item_id)) == max(items$item_id) + 1
+length(unique(dataset_all$item_id)) <= max(items$item_id) + 1
+length(unique(dataset_all$item_category_id)) == max(item_categories$item_category_id) + 1
+length(unique(dataset_all$shop_id)) == max(shops$shop_id) + 1
+
+```
+
+Less items in the train_sales than in items. Probably there are items in the test set that do not exist in the train set (363). It will be challenging to forecast these products.
+
+```{r}
+length(unique(testset_all$item_id))
+length(unique(testset_all$shop_id))
+length(unique(testset_all$item_id)) * length(unique(testset_all$shop_id))
+sum(!unique(testset_all$item_id) %in% unique(dataset_all$item_id) )
+sum(!items$item_id %in% unique(dataset_all$item_id))
+```
+
+In the testset, all shops (42 in total) can sell the same total number of item types (5100). So the size of the testset is `r 42 * 5100`.
+
+
+check NA
+
+```{r}
+sum(is.na(dataset_all))
+```
+
+```{r}
+summary(dataset_all)
+```
+
+Check if prices changed. Conclusion: prices can change probably by shop and/or date
+
+```{r}
+vec_sd <- tapply(dataset_all$item_price, dataset_all$item_id, sd)
+sum(is.na(vec_sd))
+names(vec_sd) <- NULL
+sum(vec_sd[!is.na(vec_sd)] <= 0.00000000000000000000001)
+all.equal(tapply(dataset_all$item_price, dataset_all$item_id, sd), rep(0, 21807))
+```
+
+Trend per day
+
+```{r}
+q_by_day <- tapply(dataset_all$item_cnt_day, dataset_all$date, sum)
+```
+
+
+```{r}
+df_q_by_day <- data.frame(date = as.Date(names(q_by_day)), q = as.numeric(q_by_day))
+plot(df_q_by_day$date, df_q_by_day$q, log = "y", typ = "l",
+  las = 1, cex.axis = 0.7,
+  ylab = "Quantity", xlab ="Day")
+abline(v= seq.Date(from = as.Date("2013-01-01"), 
+  to = as.Date("2015-10-31"), by = "3 month"), lty = c(2), col = "gray")
+grid(nx = NA, ny = NULL)
+```
+
+weekly seasonality
+
+```{r}
+plot(df_q_by_day$q ~ factor(weekdays(df_q_by_day$date, abbreviate = T),
+  levels = c("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")),
+  xlab = "Weekday", ylab = "quantity")
+grid()
+```
+
+
+
+Q by Month
+
+```{r}
+q_by_month <- tapply(dataset_all$item_cnt_day, dataset_all$date_block_num, sum)
+```
+
+
+```{r}
+df_q_by_month <- data.frame(month = 0:33, q = as.numeric(q_by_month))
+plot(df_q_by_month$month, df_q_by_month$q, log = "y",
+  las = 1, cex.axis = 0.7,
+  ylab = "Quantity", xlab = "Month index")
+abline(v= c(0, 6, 12, 18, 24, 30), lty = c(2, 3), col = "gray")
+grid(nx = NA, ny = NULL)
+```
+
+Q by shop
+
+```{r}
+q_by_shop <- tapply(dataset_all$item_cnt_day, dataset_all$shop_id, sum)
+```
+
+
+```{r}
+df_q_by_shop <- data.frame(shop = 0:59, q = as.numeric(q_by_shop))
+plot(df_q_by_shop$shop, df_q_by_shop$q, log = "y", las = 1,
+  ylab = "Quantity", xlab = "shop id", cex.axis = 0.7)
+grid()
+
+```
+
+Number of different items sold by shop
+
+```{r}
+unique_by_shop <- tapply(dataset_all$item_id, dataset_all$shop_id, function(x) length(unique(x)))
+```
+
+
+```{r}
+df_unique_by_shop <- data.frame(shop = 0:59, q = as.numeric(unique_by_shop))
+plot(df_unique_by_shop$shop, df_unique_by_shop$q, las = 1,
+  ylab = "number of distinct items", xlab = "Shop id", cex.axis = 0.7)
+grid()
+abline(h = 5100, col = "red", lty = 2)
+```
+
+```{r}
+sum(dataset_all$item_cnt_day == 0)
+```
+We can assume all shops can sell the same items and that when the quantity is zero it is not registered.
+
+Returns
+
+```{r}
+sum(dataset_all$item_cnt_day < 0)
+sum(dataset_all$item_cnt_day > 0)
+```
+
+Sales by category
+
+```{r}
+q_by_category <- tapply(dataset_all$item_cnt_day, dataset_all$item_category_id, sum)
+```
+
+
+```{r}
+df_q_by_category <- data.frame(category = 0:83, q = as.numeric(q_by_category))
+plot(df_q_by_category$category, df_q_by_category$q, log = "y",
+  ylab = "Quantity of items", xlab = "Category id", las = 1, cex.axis = 0.8)
+grid()
+```
+
+
+Number of unique shops per month
+
+
+```{r}
+unique_shops_by_month <- tapply(dataset_all$shop_id, dataset_all$date_block_num, 
+  function(x) length(unique(x)))
+```
+
+
+```{r}
+df_unique_shops_by_month <- data.frame(month = 0:33, q = as.numeric(unique_shops_by_month))
+plot(df_unique_shops_by_month$month, df_unique_shops_by_month$q,
+  ylab = "Quantity of shops", xlab = "Month id", las = 1, cex.axis = 0.8,
+  xlim = c(0, 34))
+# Add shops in the test dataset
+test_df <- data.frame(month = 34, q = length(unique(test$shop_id)))
+points(test_df$month, test_df$q, pch = 16, col = "red")
+grid()
+```
+
+Is there any new shop in the test month?
+
+```{r}
+sum(!unique(test$shop_id) %in% unique(dataset_all[dataset_all$date_block_num == 33, ]$shop_id))
+```
+
+All shops in the test month existed also in the month before. This is a test to run before using any model
+
+Compute number of shops-items per month
+
+```{r}
+unique_shop_item_by_month <- tapply(dataset_all$shop_item, dataset_all$date_block_num, 
+  function(x) length(unique(x)))
+```
+
+
+```{r}
+df_unique_shop_item_by_month <- data.frame(month = 0:33, q = as.numeric(unique_shop_item_by_month))
+plot(df_unique_shop_item_by_month$month, df_unique_shop_item_by_month$q,
+  ylab = "Quantity of shops_item", xlab = "Month id", las = 1, cex.axis = 0.8,
+  xlim = c(0, 34))
+# Add shops in the test dataset
+test_df <- data.frame(month = 34, q = max(test$ID) + 1)
+points(test_df$month, test_df$q, pch = 16, col = "red")
+grid()
+```
+
+Number of months active per shop
+
+```{r}
+q_months_by_shop <- tapply(dataset_all$date_block_num, dataset_all$shop_id, 
+  function(x) length(unique(x)))
+```
+
+
+```{r}
+df_q_months_by_shop <- data.frame(shop = 0:59, q = as.numeric(q_months_by_shop))
+plot(df_q_months_by_shop$shop, df_q_months_by_shop$q,
+  ylab = "Quantity of months active", xlab = "Shop id", las = 1, cex.axis = 0.8,
+  xlim = c(0, 59))
+# Add shops in the test dataset
+test_df <- data.frame(shop = 0:59, q = (0:59) %in% unique(test$shop_id))
+points(df_q_months_by_shop[test_df$q, ]$shop, 
+  df_q_months_by_shop[test_df$q, ]$q, pch = 16, col = "red")
+grid()
+legend("bottomright", legend = c("shop in the test set"), col = "red", pch = 16, cex = 0.7)
+```
+
+
+Shop with less than 34 months that are included in the testset
+
+```{r}
+shops_in_set <- test_df[test_df$q, ]$shop
+df_q_months_by_shop[
+  (df_q_months_by_shop$shop %in% shops_in_set) & (df_q_months_by_shop$q <34), ]$shop
+```
+
+## Model for a given month
+
+Let us forecast month, where n between 0 and 33.
+We forget for a moment about daily and wekkly and monthly seasonalities. Our model is that in month n we will sell the same as in month n-1.
+
+```{r}
+load("data/df_month.RData")
+```
+
+
+```{r}
+sum(df_month$item_cnt_day == 0)
+sum(df_month$item_cnt_day > 0)
+sum(df_month$item_cnt_day < 0)
+max(df_month$item_cnt_day)
+```
+
+
+```{r}
+q_different <- table(df_month$item_cnt_day[df_month$item_cnt_day > 0])
+
+```
+```{r}
+head(q_different)
+tail(q_different)
+```
+
+```{r}
+df_month[df_month$item_cnt_day == max(df_month$item_cnt_day), ]
+```
+
+
+```{r}
+range(q_different)
+```
+
+
+```{r}
+plot(as.numeric(names(q_different)), q_different, log = "xy", ylim = c(1, 2e6),
+  yaxt = "n",
+  xlab = "Quantity of an item sold", ylab = "#items")
+axis(2, at = 10^(0:6), labels = c(1, 10, 100, 1000, 10000, 100000, 1000000), las = 1)
+
+fit_qq <- lm(log(q_different, 10) ~ log(as.numeric(names(q_different)), 10) )
+abline(fit_qq, col = "red", lty = 2)
+abline(h = c(1, 10, 100, 1000, 10000, 100000, 1000000),
+  v = c(1, 5, 10, 50, 100, 500, 1000), lty = 3, col = "lightgray")
+```
+
+## Explore intermediate months
+
+```{r}
+month <- 23
+test_set <- dataset_all[dataset_all$date_block_num == month, ]
+all_combinations <- expand.grid(shops = unique(test_set$shop_id), item = unique(test_set$item_id))
+```
+
+
+```{r}
+all_shop_item_id <- paste(all_combinations$shops, all_combinations$item, sep = "_")
+```
+
+```{r}
+all_combinations$shop_item <- all_shop_item_id
+all_combinations$q <- 0
+# merge(dataset_all[dataset_all$date_block_num == month - 1, c("shop_item", "item_count_day")])
+```
+
+We could consider the dataset formed by all possibles items (22170), in all shops (60) and for all months (34) or days
+
+```{r}
+22170 * 60
+```
+
+This is the number of time series we want to forecast for the month Nov-2015. In October 2015, the total number of shop-items was
+
+```{r}
+length(unique(df_month[ df_month$date_block_num == 33, ]$shop_item))
+```
+
+these are the values dictinct of zero. The total numbers shops-items would be
+
+```{r}
+length(unique(df_month[ df_month$date_block_num == 33, ]$shop_id))
+length(unique(df_month[ df_month$date_block_num == 33, ]$item_id))
+length(unique(df_month[ df_month$date_block_num == 33, ]$shop_id)) * 
+  length(unique(df_month[ df_month$date_block_num == 33, ]$item_id))
+
+```
+
+In Nov-2015, we have `r nrow(testset)`. Total number of shop_item in month 34 that does not exist in month 33 are
+
+```{r}
+sum(!unique(testset_all$shop_item) %in% unique(df_month[ df_month$date_block_num == 33, ]$shop_item))
+```
+
+But if we check shops first
+
+```{r}
+cat("Distinct shops in month 33:", length(unique(testset_all$shop_id)), "\n")
+cat("Distinct shops in month 34:", 
+  length(unique(df_month[ df_month$date_block_num == 33, ]$shop_id)), "\n")
+cat("Difference:", 
+  sum(!unique(testset_all$shop_id) %in% unique(df_month[ df_month$date_block_num == 33, ]$shop_id)),
+  "\n")
+
+```
+
+and items later
+
+```{r}
+cat("Distinct items in month 33:", length(unique(testset_all$item_id)), "\n")
+cat("Distinct items in month 34:", 
+  length(unique(df_month[ df_month$date_block_num == 33, ]$item_id)), "\n")
+cat("Difference:", 
+  sum(!unique(testset_all$item_id) %in% unique(df_month[ df_month$date_block_num == 33, ]$item_id) ),
+  "\n")
+```
+
+```{r}
+5100 * 42
+```
+
+There are 1109 items which (we have to assume) have a quantity sold greater than 0 that were not sold the previous month. Let us check if this situation happens in previous months
+
+```{r}
+items_not_in_previous_month <- function(n){
+  stopifnot(n > 0 & n <= 34)
+  ifelse(n == 34,
+    items_n <- unique(testset_all$item_id),
+    items_n <- unique(df_month[ df_month$date_block_num == n, ]$item_id))
+  items_previous_month <- 
+    unique(df_month[ df_month$date_block_num == n - 1, ]$item_id)
+  difference <- !items_n %in% items_previous_month
+  q <- sum(df_month[ 
+    df_month$date_block_num == n &
+    df_month$item_id %in% items_n[difference] , ]$item_cnt_day)
+  return(c(sum(difference), q))
+}
+```
+
+```{r}
+m_not_in_previous_month <- t(sapply(1:34, items_not_in_previous_month))
+colnames(m_not_in_previous_month) <- c("#items", "q_sold")
+m_not_in_previous_month
+```
+
+
+```{r}
+items_new <- function(n){
+  stopifnot(n > 0 & n <= 34)
+  ifelse(n == 34,
+    items_n <- unique(testset_all$item_id),
+    items_n <- unique(df_month[ df_month$date_block_num == n, ]$item_id))
+  items_previous_month <- 
+    unique(df_month[ df_month$date_block_num <= n - 1, ]$item_id)
+  difference <- !items_n %in% items_previous_month
+  q <- sum(df_month[ 
+    df_month$date_block_num == n &
+    df_month$item_id %in% items_n[difference] , ]$item_cnt_day)
+  return(c(sum(difference), q))
+}
+```
+
+Every month there are new items introduced. The forecast of these items is the challenging part of this problem
+Potentially we can separate the items in 3 categories:
+* sold month before
+* sold before but not the month before
+* new items
+
+
+```{r}
+m_new <- t(sapply(1:34, items_new))
+colnames(m_new) <- c("#items", "q_sold")
+m_new
+```
+
+```{r}
+items_month <- function(n){
+  stopifnot(n >= 0 & n <= 34)
+  ifelse(n == 34,
+    items_n <- unique(testset_all$item_id),
+    items_n <- unique(df_month[ df_month$date_block_num == n, ]$item_id))
+  q <- sum(df_month[df_month$date_block_num == n, ]$item_cnt_day)
+  return(c(length(items_n), q))
+}
+```
+
+
+```{r}
+items_month(3)
+```
+
+```{r}
+m_items <- t(sapply(0:34, items_month))
+colnames(m_items) <- c("#items", "q_sold")
+m_items
+```
+
+```{r}
+m_not_in_previous_month - m_new
+```
+
+```{r}
+items_in_previous_month <- function(n){
+  stopifnot(n > 0 & n <= 34)
+  ifelse(n == 34,
+    items_n <- unique(testset_all$item_id),
+    items_n <- unique(df_month[ df_month$date_block_num == n, ]$item_id))
+  items_previous_month <- 
+    unique(df_month[ df_month$date_block_num == n - 1, ]$item_id)
+  difference <- items_n %in% items_previous_month
+  q <- sum(df_month[ 
+    df_month$date_block_num == n &
+    df_month$item_id %in% items_n[difference] , ]$item_cnt_day)
+  return(c(sum(difference), q))
+}
+```
+
+```{r}
+m_in_previous_month <- t(sapply(1:34, items_in_previous_month))
+colnames(m_in_previous_month) <- c("#items", "q_sold")
+m_in_previous_month
+```
+
+```{r}
+m_not_in_previous_month + m_in_previous_month
+```
+
+```{r}
+sum(m_items[-1, ] != m_in_previous_month + (m_not_in_previous_month - m_new) + m_new)
+```
+
+```{r}
+month <- 10
+cat("items in month (", month, "):", m_items[month + 1, ], "\n")
+cat("items in month - 1 (", month - 1, "):", m_in_previous_month[month, ], "\n")
+cat("items not in month -1 (", month - 1, ") but in some month before:", 
+  m_not_in_previous_month[month, ] - m_new[month, ], "\n")
+cat("items new in month (", month , "):", m_new[month, ], "\n")
+```
+
+
+
+
