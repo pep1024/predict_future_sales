@@ -53,8 +53,8 @@ load("data/item_categories.RData")
 load("data/shops.RData")
 ```
 
-Features checks and properties
-------------------------------
+Feature checks and properties
+-----------------------------
 
 Check shop and item categories numbers. Test OK
 
