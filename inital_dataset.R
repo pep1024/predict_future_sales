@@ -42,7 +42,6 @@ difftime(Sys.time(), time_0, units = "auto")
 
 ## Monthly data
 
-
 df_month <- aggregate(item_cnt_day ~ item_id + date_block_num + shop_id + shop_item + item_category_id,
   data = dataset_all[, -4], sum)
 save(df_month, file = "data/df_month.RData")
