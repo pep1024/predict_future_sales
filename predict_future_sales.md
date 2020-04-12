@@ -3,6 +3,10 @@ Predict Future Sales
 Pep Porrà
 March, 5th 2020
 
+``` r
+source("forecast_per_shop.R")
+```
+
 Read Data
 ---------
 
@@ -177,7 +181,7 @@ all.equal(tapply(dataset_all$item_price, dataset_all$item_id, sd), rep(0, 21807)
     ## [5] "Attributes: < current is not list-like >"            
     ## [6] "target is array, current is numeric"
 
-Trend per day
+### Trend per day
 
 ``` r
 q_by_day <- tapply(dataset_all$item_cnt_day, dataset_all$date, sum)
@@ -193,9 +197,9 @@ abline(v= seq.Date(from = as.Date("2013-01-01"),
 grid(nx = NA, ny = NULL)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-10-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-11-1.png)
 
-weekly seasonality
+### weekly seasonality
 
 ``` r
 plot(df_q_by_day$q ~ factor(weekdays(df_q_by_day$date, abbreviate = T),
@@ -204,9 +208,31 @@ plot(df_q_by_day$q ~ factor(weekdays(df_q_by_day$date, abbreviate = T),
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-11-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
-Q by Month
+``` r
+q_by_day.ts <- ts(q_by_day, frequency = 7)
+q_day_decompose <- decompose(q_by_day.ts)
+plot(q_day_decompose)
+```
+
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-13-1.png)
+
+``` r
+weekly_trend <- q_day_decompose$seasonal
+dates <- as.Date(names(q_by_day.ts[1:22]))
+plot(dates, window(weekly_trend, 1, 4), pch = 16, typ = "b",
+  xlab = "weekday", ylab = "Difference vs the trend",
+  xaxt = 'n', las = 1)
+x_ticks <- axis.Date(1, dates, labels = F)
+axis.Date(1, dates, format = "%a")
+grid(nx = NA, ny = NULL)
+abline(v = x_ticks, col = "lightgray", lty = 3)
+```
+
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-14-1.png)
+
+### Q by Month
 
 ``` r
 q_by_month <- tapply(dataset_all$item_cnt_day, dataset_all$date_block_num, sum)
@@ -221,9 +247,9 @@ abline(v= c(0, 6, 12, 18, 24, 30), lty = c(2, 3), col = "gray")
 grid(nx = NA, ny = NULL)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-13-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-16-1.png)
 
-Q by shop
+### Q by shop
 
 ``` r
 q_by_shop <- tapply(dataset_all$item_cnt_day, dataset_all$shop_id, sum)
@@ -236,9 +262,9 @@ plot(df_q_by_shop$shop, df_q_by_shop$q, log = "y", las = 1,
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-15-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-18-1.png)
 
-Number of different items sold by shop
+### Number of different items sold by shop
 
 ``` r
 unique_by_shop <- tapply(dataset_all$item_id, dataset_all$shop_id, function(x) length(unique(x)))
@@ -252,7 +278,7 @@ grid()
 abline(h = 5100, col = "red", lty = 2)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-17-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-20-1.png)
 
 ``` r
 sum(dataset_all$item_cnt_day == 0)
@@ -262,7 +288,7 @@ sum(dataset_all$item_cnt_day == 0)
 
 We can assume all shops can sell the same items and that when the quantity is zero it is not registered.
 
-Returns
+### Returns
 
 ``` r
 sum(dataset_all$item_cnt_day < 0)
@@ -276,7 +302,7 @@ sum(dataset_all$item_cnt_day > 0)
 
     ## [1] 2928493
 
-Sales by category
+### Sales by category
 
 ``` r
 q_by_category <- tapply(dataset_all$item_cnt_day, dataset_all$item_category_id, sum)
@@ -289,9 +315,9 @@ plot(df_q_by_category$category, df_q_by_category$q, log = "y",
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-21-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-24-1.png)
 
-Number of unique shops per month
+### Number of unique shops per month
 
 ``` r
 unique_shops_by_month <- tapply(dataset_all$shop_id, dataset_all$date_block_num, 
@@ -309,7 +335,7 @@ points(test_df$month, test_df$q, pch = 16, col = "red")
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-23-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-26-1.png)
 
 Is there any new shop in the test month?
 
@@ -321,7 +347,7 @@ sum(!unique(testset_all$shop_id) %in% unique(dataset_all[dataset_all$date_block_
 
 All shops in the test month existed also in the month before. This is a test to run before using any model
 
-Compute number of shops-items per month
+### Compute number of shops-items per month
 
 ``` r
 unique_shop_item_by_month <- tapply(dataset_all$shop_item, dataset_all$date_block_num, 
@@ -339,9 +365,9 @@ points(test_df$month, test_df$q, pch = 16, col = "red")
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-26-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-29-1.png)
 
-Number of months active per shop
+### Number of months active per shop
 
 ``` r
 q_months_by_shop <- tapply(dataset_all$date_block_num, dataset_all$shop_id, 
@@ -357,11 +383,13 @@ plot(df_q_months_by_shop$shop, df_q_months_by_shop$q,
 test_df <- data.frame(shop = 0:59, q = (0:59) %in% unique(testset_all$shop_id))
 points(df_q_months_by_shop[test_df$q, ]$shop, 
   df_q_months_by_shop[test_df$q, ]$q, pch = 16, col = "red")
-grid()
+grid(ny = NULL, nx = NA)
+abline(v = seq(0, 60, by = 5), col = "lightgray", lty = 3)
+abline(h = 1, col = "darkred", lty = 3)
 legend("bottomright", legend = c("shop in the test set"), col = "red", pch = 16, cex = 0.7)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-28-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-31-1.png)
 
 Shop with less than 34 months that are included in the testset
 
@@ -459,7 +487,7 @@ abline(h = c(1, 10, 100, 1000, 10000, 100000, 1000000),
   v = c(1, 5, 10, 50, 100, 500, 1000), lty = 3, col = "lightgray")
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-36-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-39-1.png)
 
 Explore intermediate months
 ---------------------------
@@ -781,7 +809,7 @@ abline(v = x_ticks, col ="lightgray", lty = 3)
 points(as.Date("2015-11-01"), m_items[35, 1], col = "red", pch = 16)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-55-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-58-1.png)
 
 ``` r
 m_not_in_previous_month - m_new
@@ -952,3 +980,87 @@ cat("items new in month (", month , "):", m_new[month, ], "\n")
 ```
 
     ## items new in month ( 23 ): 472 17722
+
+Forecast per shop
+-----------------
+
+``` r
+shop_id <- 1
+month_forecast <- 29
+shop_set <- dataset_all[dataset_all$shop_id == shop_id, ]
+shop_agg_by_month <- aggregate(item_cnt_day ~ date_block_num, data = shop_set, FUN = sum)
+shop_agg_by_month <- shop_agg_by_month[shop_agg_by_month$date_block_num <= month_forecast, ]
+
+# add zeros when no product is sold
+shop_set_by_month <- data.frame(date_block_num = 0:(month_forecast - 1), item_cnt_day = rep(0, month_forecast))
+shop_set_by_month[shop_agg_by_month$date_block_num + 1, ]$item_cnt_day <- shop_agg_by_month$item_cnt_day
+
+shop_set_by_month.ts <- ts(shop_set_by_month$item_cnt_day, start = c(2013, 1), frequency = 12)
+```
+
+``` r
+plot(shop_set_by_month.ts, type = "b",
+  xlab = "year", ylab = "Q per month",
+  main = paste0("Monthly units sold by shop: ", shop_id), las = 1,
+  xlim = c(2013, 2016))
+grid()
+month_forecast_year <- max(time(shop_set_by_month.ts))
+abline(v = month_forecast_year, col = "darkred", lty = 3)
+```
+
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-66-1.png)
+
+``` r
+shop.hw <- HoltWinters(
+  window(shop_set_by_month.ts, start = 2013, end = tail(time(shop_set_by_month.ts), 2)[1])
+)
+shop.forecast <- predict(shop.hw, n.ahead = 1)
+shop.forecast[1] <- max(shop.forecast, 0)
+```
+
+``` r
+plot(shop.hw, xlim = c(2014, 2016), typ = "b", pch = 1, ylim = c(0, 1.1 * max(shop_set_by_month.ts)))
+points(shop.forecast, pch = 16, col ="red")
+points(tail(time(shop_set_by_month.ts), 1), tail(shop_set_by_month.ts, 1), pch = 16, col ="black")
+```
+
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-68-1.png)
+
+``` r
+# mse
+(shop.forecast[1] - shop_set_by_month.ts[length(shop_set_by_month.ts)])^2
+```
+
+    ## [1] 0
+
+``` r
+sqrt((shop.forecast[1] - shop_set_by_month.ts[length(shop_set_by_month.ts)])^2)
+```
+
+    ## [1] 0
+
+``` r
+shop_id <- 39
+month_forecast <- 35
+test_shop <- forecast_per_shop(shop_id, month_forecast)
+```
+
+``` r
+plot(test_shop$series, 
+  xlim = c(2013, 2016), typ = "b", pch = 16, ylim = c(0, 1.1 * max(test_shop$series)),
+  las = 1, ylab = "Quantity", xlab = "Month", xaxt = 'n',
+  main = paste0("Monthly units sold by shop ", shop_id, ", forecast for month: ", month_forecast))
+#x_ticks <- axis.Date(1, test_shop$series, labels = F)
+#time(ts(0, 2014, 2016, frequency = 12))
+lines(test_shop$fitted_series[ , 1], typ = "b", col = "red")
+
+x_labels <- strftime(seq(as.Date("2013-01-01"), as.Date("2016-01-01"), by = "6 month"), "%b-%y")
+x_ticks <- axis(1, seq(2013, 2016, by = 0.5), labels = x_labels)
+
+points(test_shop$prediction, pch = 16, col ="red")
+points(test_shop$original_value, pch = 16)
+grid()
+abline(v = test_shop$month_forecast, col = "darkred", lty = 3)
+```
+
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-72-1.png)

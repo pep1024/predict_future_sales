@@ -9,6 +9,10 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+source("forecast_per_shop.R")
+```
+
 ## Read Data
 
 (https://www.kaggle.com/c/competitive-data-science-predict-future-sales/overview)
