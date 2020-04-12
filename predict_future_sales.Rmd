@@ -596,25 +596,32 @@ sqrt((shop.forecast[1] - shop_set_by_month.ts[length(shop_set_by_month.ts)])^2)
 
 
 ```{r}
-shop_id <- 51
-month_forecast <- 29
+shop_id <- 39
+month_forecast <- 35
 test_shop <- forecast_per_shop(shop_id, month_forecast)
 ```
 
 ```{r}
 plot(test_shop$series, 
-  xlim = c(2014, 2016), typ = "b", pch = 1, ylim = c(0, 1.1 * max(test_shop$series)),
-  las = 1, ylab = "Quantity", xlab = "Month")
+  xlim = c(2013, 2016), typ = "b", pch = 16, ylim = c(0, 1.1 * max(test_shop$series)),
+  las = 1, ylab = "Quantity", xlab = "Month", xaxt = 'n',
+  main = paste0("Monthly units sold by shop ", shop_id, ", forecast for month: ", month_forecast))
 #x_ticks <- axis.Date(1, test_shop$series, labels = F)
 #time(ts(0, 2014, 2016, frequency = 12))
+lines(test_shop$fitted_series[ , 1], typ = "b", col = "red")
 
-#axis(1, seq(as.Date("2014-01-01"), as.Date("2016-01-01"), by = "month"))
+x_labels <- strftime(seq(as.Date("2013-01-01"), as.Date("2016-01-01"), by = "6 month"), "%b-%y")
+x_ticks <- axis(1, seq(2013, 2016, by = 0.5), labels = x_labels)
 
 points(test_shop$prediction, pch = 16, col ="red")
-#points(tail(time(shop_set_by_month.ts), 1), tail(shop_set_by_month.ts, 1), pch = 16, col ="black")
-points(time(test_shop$series)[month_forecast + 1], test_shop$series[month_forecast + 1],
-  pch = 16)
+points(test_shop$original_value, pch = 16)
+grid()
+abline(v = test_shop$month_forecast, col = "darkred", lty = 3)
 ```
+
+
+
+
 
 
 

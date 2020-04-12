@@ -18,15 +18,21 @@ forecast_per_shop <- function(shop_id, month_forecast){
   shop.hw <- HoltWinters(ts_use)
   shop.forecast <- predict(shop.hw, n.ahead = 1)
   # If prediciton negative, turn it zero
-  shop.forecast[1] <- max(shop.forecast, 0)
+  shop.forecast[1] <- max(round(shop.forecast), 0)
+  
+  # forecasted month in time form
+  month_forecast <- tail(time(shop_set_by_month.ts), 1)
   
   # compute error
-  mse <- (shop.forecast[1] - shop_set_by_month.ts[length(shop_set_by_month.ts)])^2
+  original_value <- window(shop_set_by_month.ts, month_forecast, month_forecast) 
+  mse <- (shop.forecast[1] - original_value[1])^2
   rmse <- sqrt(mse)
   
-  result <- list(series = shop_set_by_month.ts,
+  result <- list(series = shop.hw$x, fitted_series = shop.hw$fitted,
     prediction = shop.forecast,
-    mse = mse, rmse = rmse)
+    original_value = original_value,
+    mse = mse, rmse = rmse,
+    month_forecast = month_forecast)
   
   return(result)
 }
