@@ -583,7 +583,7 @@ abline(v = seq(0, 34, by = 6), lty = 3, col ="lightgray")
 ## Forecast per shop
 
 ```{r}
-month_forecast <- 27
+month_forecast <- 24
 ```
 
 ```{r}
@@ -688,5 +688,38 @@ cat("q total predicted by month: ", q_oct_15, "\n")
 }
 ```
 
+### MAE for several months
 
+```{r, eval=F}
+time_start <- Sys.time()
+index_months <- 24:33
+
+m_results <- matrix(0, length(index_months), 3)
+row.names(m_results) <- index_months
+colnames(m_results) <- c("original", "predicted", "MAE")
+j <- 1
+for (k in index_months){
+  cat(k, ":")
+  all_forecast_shop <- lapply(0:59, forecast_per_shop, k)
+  original <- sum(sapply(all_forecast_shop, function(shop) shop$original_value))
+  predicted <- sum(sapply(all_forecast_shop, function(shop) shop$prediction))
+  mae <- ifelse(original > 0, abs(predicted / original - 1), 0)  
+  m_results[j, ] <- c(original, predicted, mae)
+  j <- j + 1
+}
+cat("\n")
+difftime(Sys.time(), time_start)
+```
+
+```{r, eval = F}
+plot(row.names(m_results), 100 * m_results[, 3],
+  xlab = "month index", ylab = "MAE %", las = 1, pch = 19, col = "red")
+lines(row.names(m_results), 100 * m_results[, 3], typ = "h", lwd = 3)
+abline(h = mean(m_results[, 3]) * 100, lty = 3, col = "darkgreen")
+grid()
+```
+
+```{r, eval = F}
+save(m_results, file = "data/mae_q_shop_holt_winters.RData")
+```
 
