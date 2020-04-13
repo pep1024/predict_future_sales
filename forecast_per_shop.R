@@ -7,7 +7,7 @@ forecast_per_shop <- function(shop_id, month_forecast){
   # limit series upto month_forecast
   shop_agg_by_month <- shop_agg_by_month[shop_agg_by_month$date_block_num <= month_forecast, ]
   # add zeros when no product is sold
-  shop_set_by_month <- data.frame(date_block_num = 0:(month_forecast - 1), item_cnt_day = rep(0, month_forecast))
+  shop_set_by_month <- data.frame(date_block_num = 0:month_forecast, item_cnt_day = rep(0, month_forecast + 1))
   shop_set_by_month[shop_agg_by_month$date_block_num + 1, ]$item_cnt_day <- shop_agg_by_month$item_cnt_day
   # Turn series into ts
   shop_set_by_month.ts <- ts(shop_set_by_month$item_cnt_day, start = c(2013, 1), frequency = 12)
@@ -21,18 +21,21 @@ forecast_per_shop <- function(shop_id, month_forecast){
   shop.forecast[1] <- max(round(shop.forecast), 0)
   
   # forecasted month in time form
-  month_forecast <- tail(time(shop_set_by_month.ts), 1)
+  #month_forecast <- tail(time(shop_set_by_month.ts), 1)
+  month_forecast_date <- time(shop.forecast)
   
   # compute error
-  original_value <- window(shop_set_by_month.ts, month_forecast, month_forecast) 
-  mse <- (shop.forecast[1] - original_value[1])^2
+  original_value <- window(shop_set_by_month.ts, month_forecast_date, month_forecast_date) 
+  abs_dif <- abs(shop.forecast[1] - original_value[1])
+  mse <- (abs_dif)^2
   rmse <- sqrt(mse)
-  
+  mae <- ifelse(original_value[1] > 0, abs_dif/original_value[1], 0)
   result <- list(series = shop.hw$x, fitted_series = shop.hw$fitted,
     prediction = shop.forecast,
     original_value = original_value,
-    mse = mse, rmse = rmse,
-    month_forecast = month_forecast)
+    mse = mse, rmse = rmse, mae = mae,
+    month_forecast = month_forecast,
+    month_forecast_date = month_forecast_date)
   
   return(result)
 }

@@ -5,6 +5,7 @@ March, 5th 2020
 
 ``` r
 source("forecast_per_shop.R")
+source("plot_shop.R")
 ```
 
 Read Data
@@ -199,7 +200,7 @@ grid(nx = NA, ny = NULL)
 
 ![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-11-1.png)
 
-### weekly seasonality
+### Weekly seasonality
 
 ``` r
 plot(df_q_by_day$q ~ factor(weekdays(df_q_by_day$date, abbreviate = T),
@@ -241,13 +242,29 @@ q_by_month <- tapply(dataset_all$item_cnt_day, dataset_all$date_block_num, sum)
 ``` r
 df_q_by_month <- data.frame(month = 0:33, q = as.numeric(q_by_month))
 plot(df_q_by_month$month, df_q_by_month$q, log = "y",
-  las = 1, cex.axis = 0.7,
+  las = 1, cex.axis = 0.7, ylim = c(50e3, 200e3),
   ylab = "Quantity", xlab = "Month index")
 abline(v= c(0, 6, 12, 18, 24, 30), lty = c(2, 3), col = "gray")
 grid(nx = NA, ny = NULL)
 ```
 
 ![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-16-1.png)
+
+``` r
+df_q_by_month.ts <- ts(df_q_by_month$q, start = c(2013, 1), frequency = 12)
+q_pred <- HoltWinters(df_q_by_month.ts)
+plot(q_pred, typ = 'b', xlim = c(2013, 2016), xaxt = 'n')
+
+x_labels <- strftime(seq(as.Date("2013-01-01"), as.Date("2016-01-01"), by = "6 month"), "%b-%y")
+x_ticks <- axis(1, seq(2013, 2016, by = 0.5), labels = x_labels)
+
+q_oct_15 <- predict(q_pred, n.ahead = 1)
+points(q_oct_15, col = "red", pch = 16)
+grid()
+legend("topright", legend = "Predicted value Nov-15", pch = 16, col ="red", cex = 0.7)
+```
+
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-17-1.png)
 
 ### Q by shop
 
@@ -262,7 +279,7 @@ plot(df_q_by_shop$shop, df_q_by_shop$q, log = "y", las = 1,
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-18-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-19-1.png)
 
 ### Number of different items sold by shop
 
@@ -278,7 +295,7 @@ grid()
 abline(h = 5100, col = "red", lty = 2)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-20-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-21-1.png)
 
 ``` r
 sum(dataset_all$item_cnt_day == 0)
@@ -315,7 +332,7 @@ plot(df_q_by_category$category, df_q_by_category$q, log = "y",
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-24-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-25-1.png)
 
 ### Number of unique shops per month
 
@@ -335,7 +352,7 @@ points(test_df$month, test_df$q, pch = 16, col = "red")
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-26-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-27-1.png)
 
 Is there any new shop in the test month?
 
@@ -365,7 +382,7 @@ points(test_df$month, test_df$q, pch = 16, col = "red")
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-29-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-30-1.png)
 
 ### Number of months active per shop
 
@@ -389,7 +406,7 @@ abline(h = 1, col = "darkred", lty = 3)
 legend("bottomright", legend = c("shop in the test set"), col = "red", pch = 16, cex = 0.7)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-31-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-32-1.png)
 
 Shop with less than 34 months that are included in the testset
 
@@ -487,7 +504,7 @@ abline(h = c(1, 10, 100, 1000, 10000, 100000, 1000000),
   v = c(1, 5, 10, 50, 100, 500, 1000), lty = 3, col = "lightgray")
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-39-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-40-1.png)
 
 Explore intermediate months
 ---------------------------
@@ -638,44 +655,16 @@ items_not_in_previous_month <- function(n){
 ``` r
 m_not_in_previous_month <- t(sapply(1:34, items_not_in_previous_month))
 colnames(m_not_in_previous_month) <- c("#items", "q_sold")
-m_not_in_previous_month
+head(m_not_in_previous_month)
 ```
 
-    ##       #items q_sold
-    ##  [1,]   1237  22511
-    ##  [2,]   1260  34563
-    ##  [3,]   1175  17698
-    ##  [4,]   1418  12708
-    ##  [5,]   1461  18726
-    ##  [6,]   1276   8753
-    ##  [7,]   1306  17233
-    ##  [8,]   1288  37150
-    ##  [9,]   1603  24797
-    ## [10,]   1589  29962
-    ## [11,]   1768  24637
-    ## [12,]   1031   4946
-    ## [13,]   1348  10936
-    ## [14,]   1473  18500
-    ## [15,]   1360  18208
-    ## [16,]   1391  16942
-    ## [17,]   1392   9943
-    ## [18,]   1387   9760
-    ## [19,]   1190  11352
-    ## [20,]   1147  22298
-    ## [21,]   1460  20996
-    ## [22,]   1364  32980
-    ## [23,]   1501  20112
-    ## [24,]    970   4276
-    ## [25,]   1215   9092
-    ## [26,]   1322  12125
-    ## [27,]   1005  20312
-    ## [28,]   1067  14863
-    ## [29,]   1089   7559
-    ## [30,]   1120   5317
-    ## [31,]   1001   6336
-    ## [32,]   1070  11705
-    ## [33,]   1372  13780
-    ## [34,]   1109      0
+    ##      #items q_sold
+    ## [1,]   1237  22511
+    ## [2,]   1260  34563
+    ## [3,]   1175  17698
+    ## [4,]   1418  12708
+    ## [5,]   1461  18726
+    ## [6,]   1276   8753
 
 ``` r
 items_new <- function(n){
@@ -698,44 +687,16 @@ Every month there are new items introduced. The forecast of these items is the c
 ``` r
 m_new <- t(sapply(1:34, items_new))
 colnames(m_new) <- c("#items", "q_sold")
-m_new
+head(m_new)
 ```
 
-    ##       #items q_sold
-    ##  [1,]   1237  22511
-    ##  [2,]    798  33717
-    ##  [3,]    628  16630
-    ##  [4,]    682  11484
-    ##  [5,]    531  16610
-    ##  [6,]    447   7103
-    ##  [7,]    470  15594
-    ##  [8,]    384  35656
-    ##  [9,]    654  23045
-    ## [10,]    489  28057
-    ## [11,]    536  22002
-    ## [12,]    207   3704
-    ## [13,]    339   9401
-    ## [14,]    310  16693
-    ## [15,]    319  15911
-    ## [16,]    262  15054
-    ## [17,]    253   8264
-    ## [18,]    316   7723
-    ## [19,]    250   9540
-    ## [20,]    330  21052
-    ## [21,]    558  18490
-    ## [22,]    460  31387
-    ## [23,]    472  17722
-    ## [24,]    197   2219
-    ## [25,]    225   7073
-    ## [26,]    336  10418
-    ## [27,]    262  19149
-    ## [28,]    225  13542
-    ## [29,]    250   6308
-    ## [30,]    206   3137
-    ## [31,]    282   5139
-    ## [32,]    302  10362
-    ## [33,]    475  11287
-    ## [34,]    363      0
+    ##      #items q_sold
+    ## [1,]   1237  22511
+    ## [2,]    798  33717
+    ## [3,]    628  16630
+    ## [4,]    682  11484
+    ## [5,]    531  16610
+    ## [6,]    447   7103
 
 ``` r
 items_month <- function(n){
@@ -757,45 +718,16 @@ items_month(34)
 ``` r
 m_items <- t(sapply(0:34, items_month))
 colnames(m_items) <- c("#items", "q_sold")
-m_items
+head(m_items)
 ```
 
-    ##       #items q_sold
-    ##  [1,]   8115 131479
-    ##  [2,]   8168 128090
-    ##  [3,]   8302 147142
-    ##  [4,]   8145 107190
-    ##  [5,]   8339 106970
-    ##  [6,]   8478 125381
-    ##  [7,]   8405 116966
-    ##  [8,]   8031 125291
-    ##  [9,]   7876 133332
-    ## [10,]   8039 127541
-    ## [11,]   8089 130009
-    ## [12,]   8474 183342
-    ## [13,]   7551 116899
-    ## [14,]   7134 109687
-    ## [15,]   7142 115297
-    ## [16,]   6774  96556
-    ## [17,]   6685  97790
-    ## [18,]   6681  97429
-    ## [19,]   6611  91280
-    ## [20,]   6363 102721
-    ## [21,]   6071  99208
-    ## [22,]   6334 107422
-    ## [23,]   6322 117845
-    ## [24,]   6605 168755
-    ## [25,]   6139 110971
-    ## [26,]   6053  84198
-    ## [27,]   6082  82014
-    ## [28,]   5476  77827
-    ## [29,]   5283  72295
-    ## [30,]   5216  64114
-    ## [31,]   5323  63187
-    ## [32,]   5108  66079
-    ## [33,]   5085  72843
-    ## [34,]   5413  71056
-    ## [35,]   5100      0
+    ##      #items q_sold
+    ## [1,]   8115 131479
+    ## [2,]   8168 128090
+    ## [3,]   8302 147142
+    ## [4,]   8145 107190
+    ## [5,]   8339 106970
+    ## [6,]   8478 125381
 
 ``` r
 dates <- seq.Date(as.Date("2013-01-01"), as.Date("2015-11-01"), by = "month")
@@ -809,47 +741,19 @@ abline(v = x_ticks, col ="lightgray", lty = 3)
 points(as.Date("2015-11-01"), m_items[35, 1], col = "red", pch = 16)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-58-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-59-1.png)
 
 ``` r
-m_not_in_previous_month - m_new
+head(m_not_in_previous_month - m_new)
 ```
 
-    ##       #items q_sold
-    ##  [1,]      0      0
-    ##  [2,]    462    846
-    ##  [3,]    547   1068
-    ##  [4,]    736   1224
-    ##  [5,]    930   2116
-    ##  [6,]    829   1650
-    ##  [7,]    836   1639
-    ##  [8,]    904   1494
-    ##  [9,]    949   1752
-    ## [10,]   1100   1905
-    ## [11,]   1232   2635
-    ## [12,]    824   1242
-    ## [13,]   1009   1535
-    ## [14,]   1163   1807
-    ## [15,]   1041   2297
-    ## [16,]   1129   1888
-    ## [17,]   1139   1679
-    ## [18,]   1071   2037
-    ## [19,]    940   1812
-    ## [20,]    817   1246
-    ## [21,]    902   2506
-    ## [22,]    904   1593
-    ## [23,]   1029   2390
-    ## [24,]    773   2057
-    ## [25,]    990   2019
-    ## [26,]    986   1707
-    ## [27,]    743   1163
-    ## [28,]    842   1321
-    ## [29,]    839   1251
-    ## [30,]    914   2180
-    ## [31,]    719   1197
-    ## [32,]    768   1343
-    ## [33,]    897   2493
-    ## [34,]    746      0
+    ##      #items q_sold
+    ## [1,]      0      0
+    ## [2,]    462    846
+    ## [3,]    547   1068
+    ## [4,]    736   1224
+    ## [5,]    930   2116
+    ## [6,]    829   1650
 
 ``` r
 items_in_previous_month <- function(n){
@@ -870,84 +774,28 @@ items_in_previous_month <- function(n){
 ``` r
 m_in_previous_month <- t(sapply(1:34, items_in_previous_month))
 colnames(m_in_previous_month) <- c("#items", "q_sold")
-m_in_previous_month
+head(m_in_previous_month)
 ```
 
-    ##       #items q_sold
-    ##  [1,]   6931 105579
-    ##  [2,]   7042 112579
-    ##  [3,]   6970  89492
-    ##  [4,]   6921  94262
-    ##  [5,]   7017 106655
-    ##  [6,]   7129 108213
-    ##  [7,]   6725 108058
-    ##  [8,]   6588  96182
-    ##  [9,]   6436 102744
-    ## [10,]   6500 100047
-    ## [11,]   6706 158705
-    ## [12,]   6520 111953
-    ## [13,]   5786  98751
-    ## [14,]   5669  96797
-    ## [15,]   5414  78348
-    ## [16,]   5294  80848
-    ## [17,]   5289  87486
-    ## [18,]   5224  81520
-    ## [19,]   5173  91369
-    ## [20,]   4924  76910
-    ## [21,]   4874  86426
-    ## [22,]   4958  84865
-    ## [23,]   5104 148643
-    ## [24,]   5169 106695
-    ## [25,]   4838  75106
-    ## [26,]   4760  69889
-    ## [27,]   4471  57515
-    ## [28,]   4216  57432
-    ## [29,]   4127  56555
-    ## [30,]   4203  57870
-    ## [31,]   4107  59743
-    ## [32,]   4015  61138
-    ## [33,]   4041  57276
-    ## [34,]   3991      0
+    ##      #items q_sold
+    ## [1,]   6931 105579
+    ## [2,]   7042 112579
+    ## [3,]   6970  89492
+    ## [4,]   6921  94262
+    ## [5,]   7017 106655
+    ## [6,]   7129 108213
 
 ``` r
-m_not_in_previous_month + m_in_previous_month
+head(m_not_in_previous_month + m_in_previous_month)
 ```
 
-    ##       #items q_sold
-    ##  [1,]   8168 128090
-    ##  [2,]   8302 147142
-    ##  [3,]   8145 107190
-    ##  [4,]   8339 106970
-    ##  [5,]   8478 125381
-    ##  [6,]   8405 116966
-    ##  [7,]   8031 125291
-    ##  [8,]   7876 133332
-    ##  [9,]   8039 127541
-    ## [10,]   8089 130009
-    ## [11,]   8474 183342
-    ## [12,]   7551 116899
-    ## [13,]   7134 109687
-    ## [14,]   7142 115297
-    ## [15,]   6774  96556
-    ## [16,]   6685  97790
-    ## [17,]   6681  97429
-    ## [18,]   6611  91280
-    ## [19,]   6363 102721
-    ## [20,]   6071  99208
-    ## [21,]   6334 107422
-    ## [22,]   6322 117845
-    ## [23,]   6605 168755
-    ## [24,]   6139 110971
-    ## [25,]   6053  84198
-    ## [26,]   6082  82014
-    ## [27,]   5476  77827
-    ## [28,]   5283  72295
-    ## [29,]   5216  64114
-    ## [30,]   5323  63187
-    ## [31,]   5108  66079
-    ## [32,]   5085  72843
-    ## [33,]   5413  71056
-    ## [34,]   5100      0
+    ##      #items q_sold
+    ## [1,]   8168 128090
+    ## [2,]   8302 147142
+    ## [3,]   8145 107190
+    ## [4,]   8339 106970
+    ## [5,]   8478 125381
+    ## [6,]   8405 116966
 
 ``` r
 sum(m_items[-1, ] != m_in_previous_month + (m_not_in_previous_month - m_new) + m_new)
@@ -981,68 +829,136 @@ cat("items new in month (", month , "):", m_new[month, ], "\n")
 
     ## items new in month ( 23 ): 472 17722
 
-Forecast per shop
------------------
-
 ``` r
-shop_id <- 1
-month_forecast <- 29
-shop_set <- dataset_all[dataset_all$shop_id == shop_id, ]
-shop_agg_by_month <- aggregate(item_cnt_day ~ date_block_num, data = shop_set, FUN = sum)
-shop_agg_by_month <- shop_agg_by_month[shop_agg_by_month$date_block_num <= month_forecast, ]
-
-# add zeros when no product is sold
-shop_set_by_month <- data.frame(date_block_num = 0:(month_forecast - 1), item_cnt_day = rep(0, month_forecast))
-shop_set_by_month[shop_agg_by_month$date_block_num + 1, ]$item_cnt_day <- shop_agg_by_month$item_cnt_day
-
-shop_set_by_month.ts <- ts(shop_set_by_month$item_cnt_day, start = c(2013, 1), frequency = 12)
-```
-
-``` r
-plot(shop_set_by_month.ts, type = "b",
-  xlab = "year", ylab = "Q per month",
-  main = paste0("Monthly units sold by shop: ", shop_id), las = 1,
-  xlim = c(2013, 2016))
-grid()
-month_forecast_year <- max(time(shop_set_by_month.ts))
-abline(v = month_forecast_year, col = "darkred", lty = 3)
+plot(0:34, m_items[, 1], ylim = c(0, 1e4), las = 1, ylab = "different items sold",
+  xlab = "Month index")
+points(0:34, c(0, m_in_previous_month[, 1]), col = "red")
+points(0:34, as.numeric(c(m_items[1, 1], m_new[, 1])), col = "blue")
+points(0:34, 
+  m_items[, 1] - c(0, m_in_previous_month[, 1]) - as.numeric(c(m_items[1, 1], m_new[, 1])), col = "darkgreen")
+grid(nx = NA)
+legend("topright", legend = c("total items", "items month-1", "items new", "other"), pch=1,
+  col = c("black", "red", "blue", "darkgreen"), cex = 0.7)
+abline(v = seq(0, 34, by = 6), lty = 3, col ="lightgray")
 ```
 
 ![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-66-1.png)
 
+Forecast per shop
+-----------------
+
 ``` r
-shop.hw <- HoltWinters(
-  window(shop_set_by_month.ts, start = 2013, end = tail(time(shop_set_by_month.ts), 2)[1])
-)
-shop.forecast <- predict(shop.hw, n.ahead = 1)
-shop.forecast[1] <- max(shop.forecast, 0)
+month_forecast <- 27
 ```
 
 ``` r
-plot(shop.hw, xlim = c(2014, 2016), typ = "b", pch = 1, ylim = c(0, 1.1 * max(shop_set_by_month.ts)))
-points(shop.forecast, pch = 16, col ="red")
-points(tail(time(shop_set_by_month.ts), 1), tail(shop_set_by_month.ts, 1), pch = 16, col ="black")
+all_forecast_shop <- lapply(0:59, forecast_per_shop, month_forecast)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-68-1.png)
+    ## Warning in HoltWinters(ts_use): optimization difficulties: ERROR:
+    ## ABNORMAL_TERMINATION_IN_LNSRCH
+
+    ## Warning in HoltWinters(ts_use): optimization difficulties: ERROR:
+    ## ABNORMAL_TERMINATION_IN_LNSRCH
+
+### All shops plot
 
 ``` r
-# mse
-(shop.forecast[1] - shop_set_by_month.ts[length(shop_set_by_month.ts)])^2
+oldpar <- par(mfrow = c(12, 5), mai = c(0,0,0,0))
+for (k in 0:59){
+  # test_shop <- forecast_per_shop(k, month_forecast)
+  test_shop <- all_forecast_shop[[k + 1]]
+  plot(test_shop$series, 
+    xlim = c(2013, 2016), typ = "l", pch = 16, ylim = c(0, 1.1 * max(test_shop$series)),
+    ylab = "", xlab = "", xaxt = 'none', yaxt = 'n')
+  points(test_shop$fitted_series[ , 1], pch  = 20, col = "red")
+  points(test_shop$prediction, pch = 16, col ="red")
+  points(test_shop$original_value, pch = 16)
+  abline(v = test_shop$month_forecast, col = "darkred", lty = 3)
+  legend("topleft", legend = k, bty = 'n')
+}
 ```
 
-    ## [1] 0
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-69-1.png)
 
 ``` r
-sqrt((shop.forecast[1] - shop_set_by_month.ts[length(shop_set_by_month.ts)])^2)
+par(oldpar)
 ```
 
-    ## [1] 0
+### Quantity per shop for the predicted month
 
 ``` r
-shop_id <- 39
-month_forecast <- 35
-test_shop <- forecast_per_shop(shop_id, month_forecast)
+original_shop <- sapply(all_forecast_shop, function(shop) shop$original_value)
+predicted_shop <- sapply(all_forecast_shop, function(shop) shop$prediction)
+plot(0:59, original_shop, typ = "l", ylab = "Q per shop", xlab = "Shop_id", las = 1,
+  main = paste0("Q per shop prediction of month ", month_forecast),
+  ylim = c(0, max(original_shop, predicted_shop)))
+points(0:59, original_shop, pch = 16, cex = 0.8)
+points(0:59, predicted_shop, col = "red", pch = 16)
+grid()
+```
+
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-70-1.png)
+
+### Global MAE
+
+``` r
+original <- sum(sapply(all_forecast_shop, function(shop) shop$original_value))
+predicted <- sum(sapply(all_forecast_shop, function(shop) shop$prediction))
+month_forecast
+```
+
+    ## [1] 27
+
+``` r
+original
+```
+
+    ## [1] 77827
+
+``` r
+predicted
+```
+
+    ## [1] 69754
+
+``` r
+ifelse(original > 0, abs(predicted / original - 1), 0)
+```
+
+    ## [1] 0.1037301
+
+### MAE per shop
+
+``` r
+mae_shop <- sapply(all_forecast_shop, function(shop) shop$mae)
+
+plot(0:59, mae_shop * 100, ylab = "MAE (%)", xlab = "Shop_id", las = 1,
+  main = paste0("MAE for q prediction of month ", month_forecast))
+abline(h = mean(mae_shop) * 100, lty = 2, col = "red")
+grid()
+```
+
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-72-1.png)
+
+### RMSE per shop
+
+``` r
+mse_shop <- sapply(all_forecast_shop, function(shop) shop$mse)
+
+plot(0:59, sqrt(mse_shop), ylab = "rmse", xlab = "Shop_id", las = 1,
+  main = paste0("rmse for q prediction of month ", month_forecast))
+abline(h = sqrt(mean(mse_shop)), lty = 2, col = "red")
+grid()
+```
+
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-73-1.png)
+
+### Plot for individual shop
+
+``` r
+shop_id <- 54
+test_shop <- all_forecast_shop[[shop_id + 1]]
 ```
 
 ``` r
@@ -1050,8 +966,7 @@ plot(test_shop$series,
   xlim = c(2013, 2016), typ = "b", pch = 16, ylim = c(0, 1.1 * max(test_shop$series)),
   las = 1, ylab = "Quantity", xlab = "Month", xaxt = 'n',
   main = paste0("Monthly units sold by shop ", shop_id, ", forecast for month: ", month_forecast))
-#x_ticks <- axis.Date(1, test_shop$series, labels = F)
-#time(ts(0, 2014, 2016, frequency = 12))
+
 lines(test_shop$fitted_series[ , 1], typ = "b", col = "red")
 
 x_labels <- strftime(seq(as.Date("2013-01-01"), as.Date("2016-01-01"), by = "6 month"), "%b-%y")
@@ -1063,4 +978,13 @@ grid()
 abline(v = test_shop$month_forecast, col = "darkred", lty = 3)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-72-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-75-1.png)
+
+### Total quantity for month 34 (Nov-15)
+
+``` r
+if(month_forecast == 34) {
+cat("q total predicted by shop: ", predicted, "\n")
+cat("q total predicted by month: ", q_oct_15, "\n")
+}
+```
