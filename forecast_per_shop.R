@@ -16,6 +16,7 @@ forecast_per_shop <- function(shop_id, month_forecast){
   last_month_ts <- tail(time(shop_set_by_month.ts), 2)[1]
   ts_use <- window(shop_set_by_month.ts, start = 2013, end = last_month_ts)
   shop.hw <- HoltWinters(ts_use)
+  
   shop.forecast <- predict(shop.hw, n.ahead = 1)
   # If prediciton negative, turn it zero
   shop.forecast[1] <- max(round(shop.forecast), 0)

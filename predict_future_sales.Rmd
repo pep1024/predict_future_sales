@@ -14,6 +14,11 @@ source("forecast_per_shop.R")
 source("plot_shop.R")
 ```
 
+
+```{r}
+library(forecast)
+```
+
 ## Read Data
 
 (https://www.kaggle.com/c/competitive-data-science-predict-future-sales/overview)
@@ -301,10 +306,7 @@ df_q_months_by_shop[
   (df_q_months_by_shop$shop %in% shops_in_set) & (df_q_months_by_shop$q <34), ]$shop
 ```
 
-## Model for a given month
-
-Let us forecast month, where n between 0 and 33.
-We forget for a moment about daily and wekkly and monthly seasonalities. Our model is that in month n we will sell the same as in month n-1.
+## Distribution of items quantity
 
 ```{r}
 load("data/df_month.RData")
@@ -352,7 +354,7 @@ abline(h = c(1, 10, 100, 1000, 10000, 100000, 1000000),
   v = c(1, 5, 10, 50, 100, 500, 1000), lty = 3, col = "lightgray")
 ```
 
-## Explore intermediate months
+## Different items per month
 
 ```{r}
 month <- 23

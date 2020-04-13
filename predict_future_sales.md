@@ -8,6 +8,18 @@ source("forecast_per_shop.R")
 source("plot_shop.R")
 ```
 
+``` r
+library(forecast)
+```
+
+    ## Warning: package 'forecast' was built under R version 3.5.3
+
+    ## Warning: As of rlang 0.4.0, dplyr must be at least version 0.8.0.
+    ## * dplyr 0.7.8 is too old for rlang 0.4.5.
+    ## * Please update dplyr to the latest version.
+    ## * Updating packages on Windows requires precautions:
+    ##   <https://github.com/jennybc/what-they-forgot/issues/62>
+
 Read Data
 ---------
 
@@ -24,12 +36,13 @@ list.files("data/")
     ##  [5] "item_categories.RData"                            
     ##  [6] "items.csv"                                        
     ##  [7] "items.RData"                                      
-    ##  [8] "sales_train.csv"                                  
-    ##  [9] "sample_submission.csv"                            
-    ## [10] "shops.csv"                                        
-    ## [11] "shops.RData"                                      
-    ## [12] "test.csv"                                         
-    ## [13] "testset_all.RData"
+    ##  [8] "mae_q_shop_holt_winters"                          
+    ##  [9] "sales_train.csv"                                  
+    ## [10] "sample_submission.csv"                            
+    ## [11] "shops.csv"                                        
+    ## [12] "shops.RData"                                      
+    ## [13] "test.csv"                                         
+    ## [14] "testset_all.RData"
 
 Read in Russian item, category and shop descriptions
 
@@ -198,7 +211,7 @@ abline(v= seq.Date(from = as.Date("2013-01-01"),
 grid(nx = NA, ny = NULL)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-11-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-12-1.png)
 
 ### Weekly seasonality
 
@@ -209,7 +222,7 @@ plot(df_q_by_day$q ~ factor(weekdays(df_q_by_day$date, abbreviate = T),
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-12-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-13-1.png)
 
 ``` r
 q_by_day.ts <- ts(q_by_day, frequency = 7)
@@ -217,7 +230,7 @@ q_day_decompose <- decompose(q_by_day.ts)
 plot(q_day_decompose)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-13-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-14-1.png)
 
 ``` r
 weekly_trend <- q_day_decompose$seasonal
@@ -231,7 +244,7 @@ grid(nx = NA, ny = NULL)
 abline(v = x_ticks, col = "lightgray", lty = 3)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-14-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-15-1.png)
 
 ### Q by Month
 
@@ -248,7 +261,7 @@ abline(v= c(0, 6, 12, 18, 24, 30), lty = c(2, 3), col = "gray")
 grid(nx = NA, ny = NULL)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-16-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-17-1.png)
 
 ``` r
 df_q_by_month.ts <- ts(df_q_by_month$q, start = c(2013, 1), frequency = 12)
@@ -264,7 +277,7 @@ grid()
 legend("topright", legend = "Predicted value Nov-15", pch = 16, col ="red", cex = 0.7)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-17-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-18-1.png)
 
 ### Q by shop
 
@@ -279,7 +292,7 @@ plot(df_q_by_shop$shop, df_q_by_shop$q, log = "y", las = 1,
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-19-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-20-1.png)
 
 ### Number of different items sold by shop
 
@@ -295,7 +308,7 @@ grid()
 abline(h = 5100, col = "red", lty = 2)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-21-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-22-1.png)
 
 ``` r
 sum(dataset_all$item_cnt_day == 0)
@@ -332,7 +345,7 @@ plot(df_q_by_category$category, df_q_by_category$q, log = "y",
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-25-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-26-1.png)
 
 ### Number of unique shops per month
 
@@ -352,7 +365,7 @@ points(test_df$month, test_df$q, pch = 16, col = "red")
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-27-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-28-1.png)
 
 Is there any new shop in the test month?
 
@@ -382,7 +395,7 @@ points(test_df$month, test_df$q, pch = 16, col = "red")
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-30-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-31-1.png)
 
 ### Number of months active per shop
 
@@ -406,7 +419,7 @@ abline(h = 1, col = "darkred", lty = 3)
 legend("bottomright", legend = c("shop in the test set"), col = "red", pch = 16, cex = 0.7)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-32-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-33-1.png)
 
 Shop with less than 34 months that are included in the testset
 
@@ -418,10 +431,8 @@ df_q_months_by_shop[
 
     ##  [1]  5 10 34 36 39 48 49 55 57 58
 
-Model for a given month
------------------------
-
-Let us forecast month, where n between 0 and 33. We forget for a moment about daily and wekkly and monthly seasonalities. Our model is that in month n we will sell the same as in month n-1.
+Distribution of items quantity
+------------------------------
 
 ``` r
 load("data/df_month.RData")
@@ -504,10 +515,10 @@ abline(h = c(1, 10, 100, 1000, 10000, 100000, 1000000),
   v = c(1, 5, 10, 50, 100, 500, 1000), lty = 3, col = "lightgray")
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-40-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-41-1.png)
 
-Explore intermediate months
----------------------------
+Different items per month
+-------------------------
 
 ``` r
 month <- 23
@@ -741,7 +752,7 @@ abline(v = x_ticks, col ="lightgray", lty = 3)
 points(as.Date("2015-11-01"), m_items[35, 1], col = "red", pch = 16)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-59-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-60-1.png)
 
 ``` r
 head(m_not_in_previous_month - m_new)
@@ -842,24 +853,18 @@ legend("topright", legend = c("total items", "items month-1", "items new", "othe
 abline(v = seq(0, 34, by = 6), lty = 3, col ="lightgray")
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-66-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-67-1.png)
 
 Forecast per shop
 -----------------
 
 ``` r
-month_forecast <- 27
+month_forecast <- 24
 ```
 
 ``` r
 all_forecast_shop <- lapply(0:59, forecast_per_shop, month_forecast)
 ```
-
-    ## Warning in HoltWinters(ts_use): optimization difficulties: ERROR:
-    ## ABNORMAL_TERMINATION_IN_LNSRCH
-
-    ## Warning in HoltWinters(ts_use): optimization difficulties: ERROR:
-    ## ABNORMAL_TERMINATION_IN_LNSRCH
 
 ### All shops plot
 
@@ -879,7 +884,7 @@ for (k in 0:59){
 }
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-69-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-70-1.png)
 
 ``` r
 par(oldpar)
@@ -898,7 +903,7 @@ points(0:59, predicted_shop, col = "red", pch = 16)
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-70-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-71-1.png)
 
 ### Global MAE
 
@@ -908,25 +913,25 @@ predicted <- sum(sapply(all_forecast_shop, function(shop) shop$prediction))
 month_forecast
 ```
 
-    ## [1] 27
+    ## [1] 24
 
 ``` r
 original
 ```
 
-    ## [1] 77827
+    ## [1] 110971
 
 ``` r
 predicted
 ```
 
-    ## [1] 69754
+    ## [1] 102761
 
 ``` r
 ifelse(original > 0, abs(predicted / original - 1), 0)
 ```
 
-    ## [1] 0.1037301
+    ## [1] 0.07398329
 
 ### MAE per shop
 
@@ -939,7 +944,7 @@ abline(h = mean(mae_shop) * 100, lty = 2, col = "red")
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-72-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-73-1.png)
 
 ### RMSE per shop
 
@@ -952,7 +957,7 @@ abline(h = sqrt(mean(mse_shop)), lty = 2, col = "red")
 grid()
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-73-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-74-1.png)
 
 ### Plot for individual shop
 
@@ -978,7 +983,7 @@ grid()
 abline(v = test_shop$month_forecast, col = "darkred", lty = 3)
 ```
 
-![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-75-1.png)
+![](predict_future_sales_files/figure-markdown_github/unnamed-chunk-76-1.png)
 
 ### Total quantity for month 34 (Nov-15)
 
@@ -987,4 +992,39 @@ if(month_forecast == 34) {
 cat("q total predicted by shop: ", predicted, "\n")
 cat("q total predicted by month: ", q_oct_15, "\n")
 }
+```
+
+### MAE for several months
+
+``` r
+time_start <- Sys.time()
+index_months <- 24:33
+
+m_results <- matrix(0, length(index_months), 3)
+row.names(m_results) <- index_months
+colnames(m_results) <- c("original", "predicted", "MAE")
+j <- 1
+for (k in index_months){
+  cat(k, ":")
+  all_forecast_shop <- lapply(0:59, forecast_per_shop, k)
+  original <- sum(sapply(all_forecast_shop, function(shop) shop$original_value))
+  predicted <- sum(sapply(all_forecast_shop, function(shop) shop$prediction))
+  mae <- ifelse(original > 0, abs(predicted / original - 1), 0)  
+  m_results[j, ] <- c(original, predicted, mae)
+  j <- j + 1
+}
+cat("\n")
+difftime(Sys.time(), time_start)
+```
+
+``` r
+plot(row.names(m_results), 100 * m_results[, 3],
+  xlab = "month index", ylab = "MAE %", las = 1, pch = 19, col = "red")
+lines(row.names(m_results), 100 * m_results[, 3], typ = "h", lwd = 3)
+abline(h = mean(m_results[, 3]) * 100, lty = 3, col = "darkgreen")
+grid()
+```
+
+``` r
+save(m_results, file = "data/mae_q_shop_holt_winters.RData")
 ```
